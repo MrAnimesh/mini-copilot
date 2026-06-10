@@ -65,8 +65,6 @@ class OllamaClient:
             if not want_stream:
                 yield _merge_frames(frames)
 
-from typing import Any
-
 
 def _merge_frames(
     frames: list[dict[str, Any]],

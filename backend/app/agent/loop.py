@@ -55,15 +55,9 @@ Rules:
 5. Only when the task is fully done,
    reply with a short confirmation message and NO tool calls.
 
-Example:
-User says:
-"implement binary search in test.py"
+Example: User says "create utils.math.py with a binary_search function" ->
+    call create_file(path="utils/math.py", content="def binary_search(arr, target):\\n  ...").
 
-Assistant should call:
-create_file(
-    path="utils/math.py",
-    content="def binary_search(arr, target):\\n    ..."
-)
 """
 
 
@@ -104,9 +98,9 @@ async def run_agent(
                 messages=messages,
                 tools=registry.schemas(),
             ):
-                msg = chunk.get("message")
+                msg = chunk.get("message") or {}
 
-                if msg and "content" in msg and msg["content"]:
+                if "content" in msg and msg["content"]:
                     assistant_content_parts.append(msg["content"])
 
                     yield AgentEvent(
@@ -115,7 +109,7 @@ async def run_agent(
                         data={"text": msg["content"]},
                     )
 
-                if msg and msg.get("tool_calls"):
+                if msg.get("tool_calls"):
                     tool_calls.extend(msg["tool_calls"])
 
                 if chunk.get("done"):
@@ -244,10 +238,12 @@ async def run_agent(
                             data={
                                 "name": name,
                                 "result": result,
+                                "approval_id":  approval_id
                             },
                         )
-
                         continue
+                else:
+                    approval_id = None
 
                 try:
                     result = await tool.handler(ctx, parsed)
@@ -267,6 +263,7 @@ async def run_agent(
                     data={
                         "name": name,
                         "result": result,
+                        "approval_id": approval_id
                     },
                 )
 

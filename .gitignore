@@ -1,8 +1,8 @@
 __pycache__/
-*•pyc
-•venv/
-•env
-•env.local
+*.pyc
+.venv/
+.env
+.env.local
 node_modules/
 dist/
 build/
@@ -10,5 +10,5 @@ build/
 *.sqlite
 *.sqlite-journal
 .DS_Store
-•idea/
-•vscode/
+.idea/
+.vscode/

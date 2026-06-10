@@ -35,36 +35,76 @@ export async function* streamAgent(
   while (true) {
     const { value, done } = await reader.read();
 
-    if (done) {
-      break;
-    }
+    if (done) break;
 
     buf += decoder.decode(value, { stream: true });
 
-    let idx: number;
+    // Extract all complete "data:" lines from the buffer.
+    // SSE spec says frames are separated by \n\n, but sse-starlette sometimes
+    // concatenates them. We use a regex to pull every "data: {...}" payload.
+    const lines = buf.split("\n");
 
-    while ((idx = buf.indexOf("\n\n")) !== -1) {
-      const frame = buf.slice(0, idx);
+    const remaining: string[] = [];
 
-      buf = buf.slice(idx + 2);
+    for (const line of lines) {
+      const trimmed = line.trim();
 
-      const dataLine = frame
-        .split("\n")
-        .find((line) => line.startsWith("data:"));
+      if (trimmed.startsWith("data:")) {
+        const payload = trimmed.slice(5).trim();
 
-      if (!dataLine) {
+        if (!payload || payload.startsWith("- ")) {
+          // ping or empty data line
+          continue;
+        }
+
+        try {
+          const ev = JSON.parse(payload) as AgentEvent;
+
+          console.log("[sse] yielding", ev.type, ev.step);
+
+          yield ev;
+        } catch {
+          // Incomplete JSON - put it back and wait for more data
+          remaining.push(line);
+        }
+      } else if (
+        trimmed.startsWith("event:") ||
+        trimmed === "" ||
+        trimmed.startsWith(": ping")
+      ) {
+        // SSE event type line or comment - skip
         continue;
+      } else if (trimmed) {
+        // Possibly a continuation of incomplete data - keep it
+        remaining.push(line);
       }
+    }
 
+    buf = remaining.join("\n");
+  }
+  if (buf.trim()) {
+    const lastLine = buf.trim();
+
+    if (lastLine.startsWith("data:")) {
       try {
-        yield JSON.parse(
-          dataLine.slice(5).trim(),
+        const ev = JSON.parse(
+          lastLine.slice(5).trim()
         ) as AgentEvent;
+
+        console.log(
+          "[sse] yielding (final)",
+          ev.type,
+          ev.step
+        );
+
+        yield ev;
       } catch {
-        // Ignore malformed SSE frames
+        /* ignore */
       }
     }
   }
+
+  console.log("[sse] stream ended");
 }
 
 export async function approve(

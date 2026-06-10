@@ -38,9 +38,7 @@ async def create_file(
         inp.path,
     )
 
-    existed_before = target.exists()
-
-    if existed_before and not inp.overwrite:
+    if target.exists and not inp.overwrite:
         return {
             "ok": False,
             "error": (
@@ -66,7 +64,7 @@ async def create_file(
         "bytes_written": len(
             inp.content.encode("utf-8")
         ),
-        "created": not existed_before,
+        "created": not target.exists() or not inp.overwrite,
     }
 
 

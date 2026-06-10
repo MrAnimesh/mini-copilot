@@ -35,7 +35,7 @@ def extract_tool_calls_from_text(text: str) -> list[dict[str, Any]]:
 
         seen.add(c)
 
-        obj = safe_loads(c)
+        obj = _safe_loads(c)
         if obj is None:
             continue
 
@@ -45,7 +45,7 @@ def extract_tool_calls_from_text(text: str) -> list[dict[str, Any]]:
     return _dedupe(out)
 
 
-def safe_loads(s: str) -> Any:
+def _safe_loads(s: str) -> Any:
     try:
         return json.loads(s)
     except Exception:
@@ -88,7 +88,6 @@ def _find_balanced_objects(text: str) -> list[str]:
 
     return out
 
-from typing import Any
 
 
 def _normalize(obj: Any) -> list[dict[str, Any]]:
@@ -140,10 +139,12 @@ def _normalize(obj: Any) -> list[dict[str, Any]]:
         else obj.get("parameters")
         if "parameters" in obj
         else obj.get("args")
+        if "args" in obj
+        else {}
     )
 
     if isinstance(args, str):
-        parsed = safe_loads(args)
+        parsed = _safe_loads(args)
         args = parsed if isinstance(parsed, dict) else {}
     
     if not isinstance(args, dict):
